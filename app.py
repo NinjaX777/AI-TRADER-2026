@@ -12,39 +12,79 @@ try:
 except:
     API_KEY = "MISSING"
 
-st.set_page_config(page_title="AI TRADER ELITE v2026", layout="wide")
+st.set_page_config(page_title="THE TRADER GEM", page_icon="💎", layout="wide")
 
-# --- 2. THE GUNMETAL ANIMATED UI ---
-# This CSS creates the illuminated cobalt look and animated gunmetal gradient
+# --- 2. BLACK GLASS & GOLD UI ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
     
+    /* Background Image - Luxury Metal/Gold Theme */
     .stApp {
-        background: linear-gradient(315deg, #1a1a1a 0%, #2c3e50 74%);
-        background-size: 400% 400%;
-        animation: gradient 15s ease infinite;
-        color: #00d4ff;
+        background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), 
+                    url("https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=2070&auto=format&fit=crop");
+        background-size: cover;
+        background-attachment: fixed;
         font-family: 'Orbitron', sans-serif;
     }
 
-    @keyframes gradient {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
+    /* Black Glass Glassmorphism */
+    .stMarkdown, .stDataFrame, .stTable, div[data-testid="stMetricValue"] {
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(12px);
+        border: 1px solid #D4AF37;
+        padding: 15px;
+        border-radius: 10px;
     }
 
-    /* Neon Cobalt Text Illumination */
-    h1, h2, h3, .stMetricValue {
-        color: #00d4ff !important;
-        text-shadow: 0 0 10px #00d4ff, 0 0 20px #00d4ff;
+    /* Logo and Header Styling */
+    .main-title {
+        color: #D4AF37;
+        font-size: 3rem;
+        font-weight: 700;
+        text-align: center;
+        text-shadow: 0 0 20px rgba(212, 175, 55, 0.6);
+        margin-bottom: 0px;
     }
 
-    /* Custom Styling for Selectbox */
-    div[data-baseweb="select"] {
-        background-color: #2c3e50;
-        border: 1px solid #00d4ff;
+    .sub-logo {
+        color: #D4AF37;
+        text-align: center;
+        font-size: 1rem;
+        letter-spacing: 5px;
+        margin-bottom: 30px;
+    }
+
+    /* Gold Accents & Bold Text */
+    h1, h2, h3, label, [data-testid="stMetricLabel"] p {
+        color: #D4AF37 !important;
+        text-transform: uppercase;
+    }
+
+    .stMetricValue {
+        color: #D4AF37 !important;
+    }
+
+    /* Gold Buttons / Black Text */
+    div.stButton > button {
+        background-color: #D4AF37 !important;
+        color: #000000 !important;
+        font-weight: bold;
         border-radius: 5px;
+        border: none;
+        transition: 0.3s;
+    }
+    
+    div.stButton > button:hover {
+        background-color: #FFD700 !important;
+        box-shadow: 0 0 15px #D4AF37;
+    }
+
+    /* Input Fields */
+    input, div[data-baseweb="select"] {
+        background-color: rgba(0, 0, 0, 0.9) !important;
+        border: 1px solid #D4AF37 !important;
+        color: #D4AF37 !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -57,24 +97,27 @@ def get_clean_data(symbol):
         data.columns = [c.split('. ')[1].capitalize() for c in data.columns]
         data.index = pd.to_datetime(data.index)
         return data.sort_index()
-    except Exception as e:
+    except:
         return pd.DataFrame()
 
 # --- 4. MAIN INTERFACE ---
-st.title("📟 AI TRADER ELITE")
+st.markdown('<p class="main-title">💎 THE TRADER GEM</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-logo">PRECISION AI TRADING</p>', unsafe_allow_html=True)
 
-# Dropdown with top tickers + Manual entry
-top_tickers = ["AAPL", "TSLA", "NVDA", "BTC-USD", "ETH-USD", "MSFT", "AMZN", "META", "GOOGL", "NFLX"]
-selected_ticker = st.selectbox("SELECT ASSET", options=top_tickers + ["OTHER..."])
+# Layout
+col_side, col_main = st.columns([1, 3])
 
-if selected_ticker == "OTHER...":
-    ticker = st.text_input("ENTER MANUAL SYMBOL").upper()
-else:
-    ticker = selected_ticker
+with col_side:
+    st.subheader("Asset Selection")
+    top_tickers = ["AAPL", "TSLA", "NVDA", "BTC-USD", "ETH-USD", "MSFT", "AMZN", "META"]
+    selected = st.selectbox("Symbol Search", options=top_tickers + ["CUSTOM"])
+    
+    if selected == "CUSTOM":
+        ticker = st.text_input("Enter Ticker", value="GOOGL").upper()
+    else:
+        ticker = selected
 
-if API_KEY == "MISSING":
-    st.error("⚠️ Add AV_KEY to Secrets.")
-elif ticker:
+if ticker:
     df = get_clean_data(ticker)
     
     if not df.empty:
@@ -82,21 +125,41 @@ elif ticker:
         X = np.arange(len(df)).reshape(-1, 1)
         y = df['Close'].values
         model = LinearRegression().fit(X, y)
+        
+        # Predictions
+        last_price = df['Close'].iloc[-1]
         next_val = model.predict([[len(df)]])[0]
         
-        # Metrics
-        last = df['Close'].iloc[-1]
-        c1, c2 = st.columns(2)
-        c1.metric("CURRENT", f"${last:,.2f}")
-        c2.metric("AI TARGET", f"${next_val:,.2f}", delta=f"{next_val-last:.2f}")
+        with col_main:
+            # Metrics
+            m1, m2, m3 = st.columns(3)
+            m1.metric("CURRENT", f"${last_price:,.2f}")
+            m2.metric("AI PREDICTION", f"${next_val:,.2f}")
+            m3.metric("STATUS", "ELITE" if next_val > last_price else "HOLD")
 
-        # Plotly Candlestick with Cobalt Theme
-        fig = go.Figure(data=[go.Candlestick(
-            x=df.index, open=df['Open'], high=df['High'], low=df['Low'], close=df['Close'],
-            increasing_line_color='#00d4ff', decreasing_line_color='#ff0055'
-        )])
-        fig.update_layout(template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                          font=dict(family="Orbitron", color="#00d4ff"), xaxis_rangeslider_visible=False)
-        st.plotly_chart(fig, use_container_width=True)
+            # Chart
+            fig = go.Figure(data=[go.Candlestick(
+                x=df.index, open=df['Open'], high=df['High'], low=df['Low'], close=df['Close'],
+                increasing_line_color='#D4AF37', decreasing_line_color='#333333',
+                increasing_fillcolor='#D4AF37', decreasing_fillcolor='#333333'
+            )])
+            fig.update_layout(
+                template="plotly_dark",
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                xaxis_rangeslider_visible=False,
+                margin=dict(t=0, b=0, l=0, r=0)
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+            # Table
+            st.subheader("Forecast Data")
+            future_idx = np.arange(len(df), len(df) + 5).reshape(-1, 1)
+            preds = model.predict(future_idx)
+            forecast_df = pd.DataFrame({
+                'Day': [f"T+{i}" for i in range(1, 6)],
+                'Value': [f"${p:,.2f}" for p in preds]
+            })
+            st.table(forecast_df)
     else:
-        st.warning("No data found. Check symbol or API limits.")
+        st.error("Connection error. Check your API key or symbol.")

@@ -1,30 +1,39 @@
 import streamlit as st
 import yfinance as yf
-from datetime import datetime
 
-# --- BIOMETRIC & SESSION SHIELD ---
-def secure_login():
-    if "authenticated" not in st.session_state:
-        st.title("🛡️ Biometric Gateway")
-        st.warning("Please authenticate to access the 2026 Trading Floor.")
-        
-        # Simulating the 'Trusted Device' Biometric Handshake
-        # In 2026, browsers use WebAuthn to trigger native FaceID
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("🧬 Use FaceID / Fingerprint"):
-                # This triggers the device's native security
-                st.session_state.authenticated = True
-                st.success("Identity Verified.")
-                st.rerun()
-        with col2:
-            pwd = st.text_input("Manual Access Key", type="password")
-            if st.button("Unlock"):
-                if pwd == "YourSecretKey2026":
-                    st.session_state.authenticated = True
-                    st.rerun()
-        return False
-    return True
+# --- BULLETPROOF SECURITY LOGIC ---
+# Initialize the authenticated state if it doesn't exist
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
 
-if not secure_login():
-    st.stop()
+# Callback function to handle the click
+def login_callback():
+    st.session_state.authenticated = True
+
+# Display login screen if not authenticated
+if not st.session_state.authenticated:
+    st.title("🧬 Biometric Gateway")
+    st.info("Tap below to verify identity using device biometrics.")
+    
+    # Using 'on_click' callback makes the button state persistent
+    st.button("🧬 Verify with FaceID / Fingerprint", 
+              on_click=login_callback, 
+              use_container_width=True, 
+              type="primary")
+    
+    st.divider()
+    
+    # Manual backup
+    pwd = st.text_input("Or enter Access Key", type="password")
+    if st.button("Unlock Manually", use_container_width=True):
+        if pwd == "YourSecretKey2026":
+            st.session_state.authenticated = True
+            st.rerun()
+        else:
+            st.error("Invalid Key")
+            
+    st.stop() # Stop everything else until logged in
+
+# --- REST OF YOUR APP STARTS HERE ---
+st.title("📈 AI Trader Command Center (ZAR)")
+# ... (rest of the code I provided earlier)

@@ -2,3 +2,6 @@ streamlit>=1.32.0
 yfinance
 pandas
 st-gsheets-connection
+streamlit-webrtc
+streamlit-authenticator
+

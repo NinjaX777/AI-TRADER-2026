@@ -3,78 +3,95 @@ import yfinance as yf
 import pandas as pd
 from datetime import date, timedelta
 
-st.set_page_config(page_title="AI Trader Elite (2026 Upgrade)", layout="wide")
+# 1. Page Configuration
+st.set_page_config(page_title="AI Trader Elite (2026 Upgrade)", layout="wide", page_icon="📈")
 
-# Simple CSS injection to emulate a light/dark toggle (optional)
+# 2. Enhanced CSS Injection
 def inject_theme_css(dark: bool):
     if dark:
         css = """
         <style>
         .stApp { background-color: #0e1117; color: #e6eef8; }
-        .css-1d391kg { color: #e6eef8; } /* headings (may vary by Streamlit versions) */
+        [data-testid="stMetricValue"] { color: #00ffcc; }
         </style>
         """
     else:
         css = """
         <style>
-        .stApp { background-color: white; color: black; }
+        .stApp { background-color: #ffffff; color: #000000; }
         </style>
         """
     st.markdown(css, unsafe_allow_html=True)
 
-# Sidebar: inputs
-st.sidebar.header("AI Trader Controls")
-ticker = st.sidebar.text_input("Ticker", value="AAPL").upper()
+# 3. Sidebar Controls
+st.sidebar.header("🕹️ AI Trader Controls")
+ticker = st.sidebar.text_input("Ticker Symbol", value="AAPL").upper()
 days = st.sidebar.slider("Days of history", min_value=7, max_value=3650, value=365, step=1)
-use_dark = st.sidebar.checkbox("Use dark theme (CSS injection)", value=False)
+use_dark = st.sidebar.checkbox("Use custom dark theme", value=True)
 st.sidebar.markdown("---")
-st.sidebar.markdown("Data source: yfinance (Yahoo Finance)")
 
-# Apply theme CSS (optional)
 inject_theme_css(use_dark)
 
-# Data fetching with cache to avoid repeated downloads
+# 4. Robust Data Fetching
 @st.cache_data(ttl=3600)
 def fetch_history(ticker_symbol: str, period_days: int) -> pd.DataFrame:
     end = date.today()
     start = end - timedelta(days=period_days)
     try:
-        # yfinance download returns a DataFrame with a DatetimeIndex
-        df = yf.download(ticker_symbol, start=start.isoformat(), end=end.isoformat(), progress=False)
-    except Exception as e:
-        st.error(f"Error fetching data for {ticker_symbol}: {e}")
-        return pd.DataFrame()
-    # Ensure index is datetime and columns exist
-    if df.empty:
-        return df
-    df.index = pd.to_datetime(df.index)
-    return df
+        # Fetch data
+        df = yf.download(ticker_symbol, start=start, end=end, progress=False)
+        
+        if df.empty:
+            return pd.DataFrame()
 
-st.title("AI Trader Elite — Market Viewer")
-st.write("A minimal dashboard to preview historical price data. Extend this with your AI models, auth, and sheets integrations.")
+        # FIX: Flatten Multi-index columns if they exist
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
+            
+        df.index = pd.to_datetime(df.index)
+        return df
+    except Exception as e:
+        st.error(f"Error fetching data: {e}")
+        return pd.DataFrame()
+
+# 5. Main UI Logic
+st.title("📈 AI Trader Elite — Market Viewer")
+st.caption("2026 Edition | Real-time Market Data & Analytics")
 
 if not ticker:
-    st.warning("Enter a ticker symbol in the sidebar (e.g., AAPL, MSFT).")
+    st.warning("Please enter a ticker symbol to begin.")
 else:
-    with st.spinner(f"Fetching {ticker} data..."):
+    with st.spinner(f"Analyzing {ticker}..."):
         df = fetch_history(ticker, days)
 
-    if df is None or df.empty:
-        st.error(f"No historical data found for ticker: {ticker}")
+    if df.empty:
+        st.error(f"No data found for '{ticker}'. Please check the symbol and try again.")
     else:
-        # Summary metrics
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Latest Close", f"${df['Close'].iloc[-1]:.2f}")
-        col2.metric("Change (1d)", f"{(df['Close'].pct_change().iloc[-1]*100):.2f}%")
-        col3.metric("Data Points", len(df))
+        # Metrics Calculation
+        last_close = float(df['Close'].iloc[-1])
+        prev_close = float(df['Close'].iloc[-2])
+        change = ((last_close - prev_close) / prev_close) * 100
 
-        # Plot closing price
-        st.subheader(f"{ticker} — Closing Price")
-        st.line_chart(df['Close'])
+        # Layout: Metrics
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Latest Close", f"${last_close:,.2f}")
+        m2.metric("Daily Change", f"{change:.2f}%", delta=f"{change:.2f}%")
+        m3.metric("Data Points", len(df))
 
-        # Show a few rows and allow download
-        st.subheader("Recent data")
-        st.dataframe(df.tail(50))
+        # Layout: Chart
+        st.subheader(f"Price Action: {ticker}")
+        st.line_chart(df['Close'], use_container_width=True)
 
-        csv = df.to_csv().encode('utf-8')
-        st.download_button(label="Download CSV", data=csv, file_name=f"{ticker}_history.csv", mime="text/csv")
+        # Layout: Data Table & Export
+        with st.expander("View Raw Data Records"):
+            st.dataframe(df.sort_index(ascending=False), use_container_width=True)
+            
+            csv = df.to_csv().encode('utf-8')
+            st.download_button(
+                label="📥 Download CSV",
+                data=csv,
+                file_name=f"{ticker}_history.csv",
+                mime="text/csv"
+            )
+
+st.sidebar.info("Tip: Use the slider to adjust the lookback period for technical analysis.")

@@ -1,6 +1,6 @@
 streamlit
 pandas
-alpha_vantage
-scikit-learn
 numpy
 plotly
+alpha-vantage
+scikit-learn

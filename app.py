@@ -1,10 +1,11 @@
+from streamlit_gsheets import GSheetsConnection
 import streamlit as st
 import yfinance as yf
 import pandas as pd
 from datetime import datetime
 
 # --- SECURITY ---
-ACCESS_PASSWORD = "YourSecretKey2026" # CHANGE THIS
+ACCESS_PASSWORD = "P@$sw0R_d1992" # CHANGE THIS
 
 def check_password():
     if "authenticated" not in st.session_state:

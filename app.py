@@ -2,94 +2,100 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 
-# --- 1. THE "MODERN GLASS" LOOK ---
-st.set_page_config(page_title="My Simple Trader", layout="wide")
+# 1. FORCED MOBILE GLASS UI (2026 Chrome Hack)
+st.set_page_config(page_title="Elite Trader ZAR", layout="wide")
 
 st.markdown("""
 <style>
+    /* Fixed Background Gradient */
     .stApp {
         background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%) !important;
+        background-attachment: fixed !important;
     }
-    [data-testid="stMetric"], .stTabs, div[data-baseweb="input"], .stSlider, .stInfo, .stSuccess {
-        background: rgba(255, 255, 255, 0.1) !important;
-        backdrop-filter: blur(15px) !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        border-radius: 20px !important;
+
+    /* Brute-force removal of Streamlit's solid backgrounds */
+    div[data-testid="stMetric"], .stSelectbox, .stTabs, .stSlider, .stInfo, .stSuccess, div[data-baseweb="input"] {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        border-radius: 18px !important;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* THE MAGIC: Pseudo-element blur for Mobile Chrome */
+    div[data-testid="stMetric"]::before, .stSelectbox::before, .stTabs::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        backdrop-filter: blur(25px) saturate(180%);
+        -webkit-backdrop-filter: blur(25px) saturate(180%);
+        z-index: -1;
+    }
+
+    /* Text Clarity */
+    h1, h2, h3, p, label, .stMetric label {
         color: white !important;
+        font-family: 'Inter', sans-serif;
+        text-shadow: 0px 2px 5px rgba(0,0,0,0.7);
     }
-    h1, h2, h3, p, label { color: white !important; font-family: 'sans-serif'; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. EASY LOGIN ---
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
+# 2. THE SMART SEARCH (No Tickers Needed)
+st.title("🛡️ Trader Command Center")
 
-if not st.session_state.authenticated:
-    st.title("🛡️ Welcome to Your Trading App")
-    st.write("Tap the button below to start.")
-    if st.button("Unlock My Dashboard", use_container_width=True, type="primary"):
-        st.session_state.authenticated = True
-        st.rerun()
-    st.stop()
-
-# --- 3. THE "NO-GUESSING" SEARCH ---
-st.title("📈 Simple Trading Center")
-
-# We create a dictionary so you can pick by Name, not Ticker
-search_options = {
+# A dictionary of the biggest companies for you
+companies = {
     "Select a Company": "",
-    "Absa Bank (SA)": "ABG.JO",
-    "Sasol (SA)": "SOL.JO",
-    "Naspers (SA)": "NPN.JO",
-    "Standard Bank (SA)": "SBK.JO",
-    "Apple (US)": "AAPL",
-    "Tesla (US)": "TSLA",
-    "Amazon (US)": "AMZN",
-    "S&P 500 (US Top 500 Stocks)": "SPY"
+    "Absa Bank": "ABG.JO",
+    "Sasol (Energy/Petrol)": "SOL.JO",
+    "Naspers (Tech/Tencent)": "NPN.JO",
+    "FirstRand (FNB)": "FSR.JO",
+    "Capitec": "CPI.JO",
+    "Apple (iPhone)": "AAPL",
+    "Tesla (Elon Musk)": "TSLA",
+    "S&P 500 (US Top 500)": "SPY"
 }
 
-selection = st.selectbox("Which company do you want to check?", list(search_options.keys()))
-ticker = search_options[selection]
+# The Dropdown
+selection = st.selectbox("Search for a Company", list(companies.keys()))
+ticker = companies[selection]
 
 if ticker:
-    with st.spinner('Loading market data...'):
-        try:
-            # Get the data
-            data = yf.download(ticker, period="1y")
-            if isinstance(data.columns, pd.MultiIndex):
-                data.columns = data.columns.get_level_values(0)
+    try:
+        # Load Data
+        df = yf.download(ticker, period="1y")
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
             
-            # Get Rand/Dollar exchange rate
-            fx = yf.download("USDZAR=X", period="1d")['Close'].iloc[-1]
-            
-            price = float(data['Close'].iloc[-1])
-            is_jse = ".JO" in ticker
-            final_price_zar = price if is_jse else price * fx
+        # ZAR Exchange Rate
+        fx = yf.download("USDZAR=X", period="1d")['Close'].iloc[-1]
+        
+        # Numbers
+        price = float(df['Close'].iloc[-1])
+        is_jse = ".JO" in ticker
+        final_zar = price if is_jse else price * fx
+        trend = df['Close'].rolling(200).mean().iloc[-1]
 
-            # --- DISPLAY SECTION ---
-            st.subheader(f"Results for {selection}")
-            
-            c1, c2 = st.columns(2)
-            c1.metric("Current Price (Rand)", f"R{final_price_zar:,.2f}")
-            c2.metric("Rand/Dollar Rate", f"R{fx:.2f}")
+        # 3. THE DISPLAY
+        st.subheader(f"Current Analysis: {selection}")
+        
+        m1, m2 = st.columns(2)
+        m1.metric("Current Price (ZAR)", f"R{final_zar:,.2f}")
+        m2.metric("USD/ZAR Rate", f"R{fx:.2f}")
 
-            st.line_chart(data['Close'])
+        # The Chart
+        st.area_chart(df['Close'])
 
-            # --- PLAIN ENGLISH ADVICE ---
-            st.divider()
-            st.subheader("💡 Simple Advice")
-            
-            ma200 = data['Close'].rolling(200).mean().iloc[-1]
-            
-            if price > ma200:
-                st.success(f"✅ Looks good! {selection} is currently in a growing trend.")
-                st.info(f"Strategy: If you have R10,000 to invest, buying R1,000 worth of this stock is a safe way to start.")
-            else:
-                st.warning(f"⚠️ Be careful. {selection} is currently losing value. It might be better to wait.")
+        # 4. PLAIN ENGLISH GUIDANCE
+        st.divider()
+        if price > trend:
+            st.success(f"🟢 BUY SIGNAL: {selection} is performing well. The trend is currently upward.")
+        else:
+            st.warning(f"🔴 CAUTION: {selection} is losing value. Professional advice would be to wait.")
 
-        except Exception as e:
-            st.error("Something went wrong. Please try selecting a different company.")
+    except:
+        st.error("Market data unavailable for this selection.")
 
 else:
-    st.info("Please select a company from the list above to see its performance.")
+    st.info("👋 Welcome. Please pick a company from the list above to see how they are performing today.")

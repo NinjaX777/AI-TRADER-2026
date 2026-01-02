@@ -1,9 +1,5 @@
-# Updated requirements for AI-TRADER-2026 — pinned minimums to improve reproducibility
-# Updated: 2026-01-02
-
-streamlit>=1.32.0
-yfinance>=0.2.37
-pandas>=2.2.0
-st-gsheets-connection>=0.1.0
-streamlit-webrtc>=0.47.2
-streamlit-authenticator>=0.2.4
+streamlit
+pandas
+alpha_vantage
+scikit-learn
+numpy

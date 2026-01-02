@@ -48,7 +48,7 @@ if data is not None:
     tab1, tab2 = st.tabs(["📊 Market Signal", "🛡️ Risk Manager"])
 
     with tab1:
-        st.metric(ticker, f"${curr_p:.2f}")
+        st.metric(ticker, f"R{curr_p:.2f}")
         st.line_chart(data['Close'])
         
         if curr_p > ma200 and rsi < 70:
@@ -59,13 +59,13 @@ if data is not None:
             st.error("❌ AVOID: Asset is in a downtrend (Below 200MA).")
 
     with tab2:
-        balance = st.number_input("Account Balance ($)", value=10000)
+        balance = st.number_input("Account Balance (R)", value=10000)
         risk_pct = st.slider("Risk Per Trade (%)", 0.5, 2.0, 1.0)
-        stop_loss = st.number_input("Stop Loss Price ($)", value=curr_p * 0.95)
+        stop_loss = st.number_input("Stop Loss Price (R)", value=curr_p * 0.95)
         
         risk_amt = balance * (risk_pct / 100)
         shares = int(risk_amt / (curr_p - stop_loss)) if curr_p > stop_loss else 0
         
         st.info(f"ACTION: Buy {shares} shares")
-        st.write(f"This risks exactly ${risk_amt:.2f} of your capital.")
+        st.write(f"This risks exactly R{risk_amt:.2f} of your capital.")
 

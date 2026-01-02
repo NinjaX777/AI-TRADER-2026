@@ -2,90 +2,94 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 
-# 1. THE GLASS UI ENGINE (REWRITTEN FOR 2026 STABILITY)
-st.set_page_config(page_title="AI Trader ZAR", layout="wide")
+# --- 1. THE "MODERN GLASS" LOOK ---
+st.set_page_config(page_title="My Simple Trader", layout="wide")
 
 st.markdown("""
 <style>
-    /* Gradient Background so you can actually see the glass effect */
     .stApp {
-        background: linear-gradient(145deg, #0e1117 0%, #1c1f2b 100%) !important;
+        background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%) !important;
     }
-
-    /* Glass Panels: These target the actual metric and input wrappers */
-    [data-testid="stMetric"], [data-testid="stMetricValue"], .stTabs, div[data-baseweb="input"] {
-        background: rgba(255, 255, 255, 0.05) !important;
-        backdrop-filter: blur(12px) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        border-radius: 15px !important;
-        padding: 15px !important;
-    }
-
-    /* Ensure text is always white and readable */
-    h1, h2, h3, p, label {
+    [data-testid="stMetric"], .stTabs, div[data-baseweb="input"], .stSlider, .stInfo, .stSuccess {
+        background: rgba(255, 255, 255, 0.1) !important;
+        backdrop-filter: blur(15px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        border-radius: 20px !important;
         color: white !important;
-        font-family: 'sans-serif';
     }
+    h1, h2, h3, p, label { color: white !important; font-family: 'sans-serif'; }
 </style>
 """, unsafe_allow_html=True)
 
-# 2. SIMPLE SECURITY (NO TRICKS)
+# --- 2. EASY LOGIN ---
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
 if not st.session_state.authenticated:
-    st.title("🛡️ Secure Access")
-    if st.button("Unlock Dashboard", use_container_width=True):
+    st.title("🛡️ Welcome to Your Trading App")
+    st.write("Tap the button below to start.")
+    if st.button("Unlock My Dashboard", use_container_width=True, type="primary"):
         st.session_state.authenticated = True
         st.rerun()
     st.stop()
 
-# 3. CORE TRADING TOOLS
-st.title("📈 AI Command Center")
+# --- 3. THE "NO-GUESSING" SEARCH ---
+st.title("📈 Simple Trading Center")
 
-@st.cache_data(ttl=3600)
-def get_market_data(ticker):
-    try:
-        df = yf.download(ticker, period="1y")
-        # Fix for 2026 yfinance MultiIndex data
-        if isinstance(df.columns, pd.MultiIndex):
-            df.columns = df.columns.get_level_values(0)
+# We create a dictionary so you can pick by Name, not Ticker
+search_options = {
+    "Select a Company": "",
+    "Absa Bank (SA)": "ABG.JO",
+    "Sasol (SA)": "SOL.JO",
+    "Naspers (SA)": "NPN.JO",
+    "Standard Bank (SA)": "SBK.JO",
+    "Apple (US)": "AAPL",
+    "Tesla (US)": "TSLA",
+    "Amazon (US)": "AMZN",
+    "S&P 500 (US Top 500 Stocks)": "SPY"
+}
+
+selection = st.selectbox("Which company do you want to check?", list(search_options.keys()))
+ticker = search_options[selection]
+
+if ticker:
+    with st.spinner('Loading market data...'):
+        try:
+            # Get the data
+            data = yf.download(ticker, period="1y")
+            if isinstance(data.columns, pd.MultiIndex):
+                data.columns = data.columns.get_level_values(0)
             
-        fx_df = yf.download("USDZAR=X", period="1d")
-        fx = fx_df['Close'].iloc[-1] if not fx_df.empty else 18.50
-        return df, float(fx)
-    except:
-        return None, 18.50
+            # Get Rand/Dollar exchange rate
+            fx = yf.download("USDZAR=X", period="1d")['Close'].iloc[-1]
+            
+            price = float(data['Close'].iloc[-1])
+            is_jse = ".JO" in ticker
+            final_price_zar = price if is_jse else price * fx
 
-symbol = st.text_input("ENTER TICKER (e.g. XLF or ABG.JO)", "XLF").upper()
-data, zar_rate = get_market_data(symbol)
+            # --- DISPLAY SECTION ---
+            st.subheader(f"Results for {selection}")
+            
+            c1, c2 = st.columns(2)
+            c1.metric("Current Price (Rand)", f"R{final_price_zar:,.2f}")
+            c2.metric("Rand/Dollar Rate", f"R{fx:.2f}")
 
-if data is not None and not data.empty:
-    price = float(data['Close'].iloc[-1])
-    is_jse = ".JO" in symbol
-    price_zar = price if is_jse else price * zar_rate
+            st.line_chart(data['Close'])
 
-    # The Visual Layout
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric("Live Price (ZAR)", f"R{price_zar:,.2f}")
-    with col2:
-        st.metric("ZAR Rate", f"R{zar_rate:.2f}")
+            # --- PLAIN ENGLISH ADVICE ---
+            st.divider()
+            st.subheader("💡 Simple Advice")
+            
+            ma200 = data['Close'].rolling(200).mean().iloc[-1]
+            
+            if price > ma200:
+                st.success(f"✅ Looks good! {selection} is currently in a growing trend.")
+                st.info(f"Strategy: If you have R10,000 to invest, buying R1,000 worth of this stock is a safe way to start.")
+            else:
+                st.warning(f"⚠️ Be careful. {selection} is currently losing value. It might be better to wait.")
 
-    st.line_chart(data['Close'])
-    
-    st.subheader("🛡️ Risk & Goals")
-    st.info("Goal: 20% Growth | Risk: 1% per trade")
-    
-    balance = st.number_input("Account Balance (R)", value=100000)
-    stop_loss = st.number_input("Stop Loss (R)", value=price_zar * 0.95)
-    
-    risk_rands = balance * 0.01
-    loss_per_share = price_zar - stop_loss
-    
-    if loss_per_share > 0:
-        shares = int(risk_rands / loss_per_share)
-        st.success(f"👉 ACTION: Buy {shares} shares of {symbol}")
-    
+        except Exception as e:
+            st.error("Something went wrong. Please try selecting a different company.")
+
 else:
-    st.error("Waiting for valid ticker input...")
+    st.info("Please select a company from the list above to see its performance.")
